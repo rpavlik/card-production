@@ -134,6 +134,10 @@ def produce(production_file, verbose):
     gids = GidsApplet()
     gp = GP()
 
+    # Try uninstalling first
+    log.info("Uninstalling GidsApplet in case it already exists")
+    gp.uninstall(gids.cap_file, **kwargs)
+
     # Install applet
     log.info("Installing GidsApplet")
     gp.install(gids.cap_file, **kwargs)
