@@ -1,6 +1,8 @@
 # Copyright 2023, Collabora, Ltd.
 #
 # SPDX-License-Identifier: GPL-3.0-only
+#
+# Original author: Rylie Pavlik <rylie.pavlik@collabora.com>
 
 import logging
 import secrets
