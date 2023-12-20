@@ -10,13 +10,16 @@ from dataclasses import dataclass
 import subprocess
 from pathlib import Path
 
+from dataclass_wizard import YAMLWizard
+
+from .pkcs12 import Pkcs12
 from .util import is_digits, is_hex
 
 _LOG = logging.getLogger(__name__)
 
 
 @dataclass
-class GidsAppletParameters:
+class GidsAppletParameters(YAMLWizard):
     """Parameters required for initialization of a smartcard running GidsApplet."""
 
     admin_key: str  # 48 hex characters
@@ -32,22 +35,28 @@ class GidsAppletParameters:
         # Admin key
         self.admin_key = self.admin_key.upper()
         if len(self.admin_key) != 48:
-            raise RuntimeError("Admin key must be 48 hex digits")
+            raise RuntimeError(
+                f"Admin key must be 48 hex digits, got '{self.admin_key}'"
+            )
         if not is_hex(self.admin_key):
-            raise RuntimeError("Admin key must be only hex digits")
+            raise RuntimeError(
+                f"Admin key must be only hex digits, got '{self.admin_key}'"
+            )
 
         # Serial num
         self.sn = self.sn.upper()
         if len(self.sn) != 32:
-            raise RuntimeError("Serial number must be 32 hex digits")
+            raise RuntimeError(f"Serial number must be 32 hex digits, got '{self.sn}'")
         if not is_hex(self.sn):
-            raise RuntimeError("Serial number must be only hex digits")
+            raise RuntimeError(
+                f"Serial number must be only hex digits, got '{self.sn}'"
+            )
 
         # PIN - this may be overly strict
         if len(self.pin) != 6:
-            raise RuntimeError("PIN must be 6 decimal digits")
-        if not is_digits(self.sn):
-            raise RuntimeError("PIN must be only decimal digits")
+            raise RuntimeError(f"PIN must be 6 decimal digits, got '{self.pin}'")
+        if not is_digits(self.pin):
+            raise RuntimeError(f"PIN must be only decimal digits, got '{self.pin}'")
 
     @classmethod
     def generate(cls):
@@ -56,6 +65,14 @@ class GidsAppletParameters:
         sn = secrets.token_hex(16)
         pin = "".join(str(randint(0, 9)) for _ in range(6))
         return cls(admin_key=admin_key, sn=sn, pin=pin)
+
+
+@dataclass
+class GidsAppletKeyLoading(YAMLWizard):
+    """Parameters for loading a secret key and certificate into a GIDS applet"""
+
+    label: str
+    key: Pkcs12
 
 
 class GidsApplet:
@@ -87,6 +104,34 @@ class GidsApplet:
                 params.sn,
             )
         )
+        subprocess.check_call(cmd)
+
+    def import_key(
+        self, params: GidsAppletParameters, loading: GidsAppletKeyLoading, verbose=False
+    ):
+        """Import private key and certificate from p12 file"""
+        cmd = ["pkcs15-init"]
+        if verbose:
+            cmd.append("-v")
+        cmd.extend(
+            (
+                "--verify-pin",
+                "--pin",
+                params.pin,
+                "--store-private-key",
+                loading.key.filename,
+                "--format",
+                "pkcs12",
+                "--auth-id",
+                "80",
+                "--label",
+                loading.label,
+            )
+        )
+        if loading.key.passphrase:
+            cmd.extend(("--passphrase", loading.key.passphrase))
+
+        self._log.info("Importing %s as %s", loading.key.filename, loading.label)
         subprocess.check_call(cmd)
 
     def _gids_tool(self, verbose=False, wait=False):

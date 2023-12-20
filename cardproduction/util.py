@@ -60,4 +60,4 @@ def is_digits(s: str) -> bool:
     >>> is_digits("feedthebed")
     False
     """
-    return all(c in "01234567890" for c in s)
+    return all(c in "0123456789" for c in s)

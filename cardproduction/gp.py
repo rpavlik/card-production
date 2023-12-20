@@ -5,9 +5,11 @@
 import logging
 import secrets
 import subprocess
-from pathlib import Path
 from copy import copy
 from dataclasses import dataclass
+from typing import Iterable, Optional, Union
+
+from dataclass_wizard import YAMLWizard
 
 from .util import is_hex
 
@@ -15,7 +17,7 @@ _LOG = logging.getLogger(__name__)
 
 
 @dataclass
-class GPParameters:
+class GPParameters(YAMLWizard):
     """
     Parameters required for GlobalPlatform usage.
 
@@ -61,7 +63,7 @@ class GPParameters:
 class GP:
     """Wrapper for the GlobalPlatformPro command line tool."""
 
-    def __init__(self, invocation_cmd):
+    def __init__(self, invocation_cmd: Union[str, Iterable[str], None] = None):
         """Initialize the GP tool wrapper object."""
         self._log = _LOG.getChild("GP")
 
@@ -79,9 +81,9 @@ class GP:
             cmd.append("--verbose")
         return cmd
 
-    def uninstall(self, cap_file, allow_failure=True, verbose=False):
-        """Uninstall an applet"""
-        cmd = self._make_cmd(verbose=verbose)
+    def uninstall(self, cap_file, allow_failure=True, verbose=False, **kwargs):
+        """Uninstall an applet."""
+        cmd = self._make_cmd(verbose=verbose, **kwargs)
         cmd.extend(("--uninstall", str(cap_file)))
         self._log.info("Uninstalling %s", cap_file)
         retcode = subprocess.call(cmd)
@@ -94,3 +96,48 @@ class GP:
                 )
             else:
                 raise RuntimeError(f"Failed to uninstall {cap_file}")
+
+    def install(self, cap_file, default_selected=True, verbose=False, **kwargs):
+        """Install an applet."""
+        cmd = self._make_cmd(verbose=verbose, **kwargs)
+        cmd.extend(("--install", str(cap_file)))
+
+        if default_selected:
+            cmd.append("--default")
+
+        self._log.info("Installing %s", cap_file)
+        subprocess.check_call(cmd)
+
+    def lock_card(
+        self,
+        new_params: GPParameters,
+        old_params: Optional[GPParameters] = None,
+        verbose=False,
+    ):
+        """Set the GP lock key."""
+        if not old_params:
+            # Use default
+            old_params = GPParameters()
+        new_params.enforce_requirements()
+        old_params.enforce_requirements()
+        self._log.info(
+            "Changing GP lock key from %s to %s", old_params.key, new_params.key
+        )
+
+        cmd = self._make_cmd(verbose=verbose)
+        cmd.extend(("--key", old_params.key, "--lock", new_params.key))
+        subprocess.check_call(cmd)
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
+
+    _LOG.info("Cycling lock key")
+
+    random_key_params = GPParameters.generate()
+
+    gp = GP()
+
+    gp.lock_card(random_key_params, verbose=True)
+
+    gp.lock_card(new_params=GPParameters(), old_params=random_key_params, verbose=True)
