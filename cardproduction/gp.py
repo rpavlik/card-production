@@ -11,15 +11,17 @@ from copy import copy
 from dataclasses import dataclass
 from typing import Iterable, Optional, Union
 
-from dataclass_wizard import YAMLWizard
+from dataclasses_json import dataclass_json
+import toml
 
 from .util import is_hex
 
 _LOG = logging.getLogger(__name__)
 
 
+@dataclass_json
 @dataclass
-class GPParameters(YAMLWizard):
+class GPParameters:
     """
     Parameters required for GlobalPlatform usage.
 
@@ -60,6 +62,18 @@ class GPParameters(YAMLWizard):
         """
         key = secrets.token_hex(16)
         return cls(key=key)
+
+    @classmethod
+    def load_toml(cls, path):
+        """Load a toml file containing this data."""
+        with open(path, "r", encoding="utf-8") as fp:
+            loaded = toml.load(fp)
+        return cls.from_dict(loaded)  # type: ignore
+
+    def write_toml(self, path):
+        """Write a toml file containing this data."""
+        with open(path, "w", encoding="utf-8") as fp:
+            toml.dump(self.to_dict(), fp)  # type: ignore
 
 
 class GP:

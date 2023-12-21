@@ -9,8 +9,6 @@ import logging
 
 import click
 
-import yaml
-
 
 from .common import common
 from ..gp import GPParameters
@@ -22,29 +20,26 @@ _LOG = logging.getLogger(__name__)
 
 @common.command()
 @click.argument(
-    "yaml_filename",
+    "toml_filename",
     type=click.Path(file_okay=True, dir_okay=False, writable=True),
 )
-def gids_init(yaml_filename):
-    """Generate GidsApplet card init parameters into a YAML file"""
+def gids_init(toml_filename):
+    """Generate GidsApplet card init parameters into a TOML file"""
     params = GidsAppletParameters.generate()
-    _LOG.info("Writing %s", yaml_filename)
-    with open(yaml_filename, "w", encoding="utf-8") as fp:
-        yaml.dump(params, fp)
+    _LOG.info("Writing %s", toml_filename)
+    params.write_toml(toml_filename)
 
 
 @common.command()
 @click.argument(
-    "yaml_filename",
+    "toml_filename",
     type=click.Path(file_okay=True, dir_okay=False, writable=True),
 )
-def gp(yaml_filename):
-    """Generate GlobalPlatform card parameters into a YAML file"""
+def gp(toml_filename):
+    """Generate GlobalPlatform card parameters into a TOML file"""
     params = GPParameters.generate()
-    _LOG.info("Writing %s", yaml_filename)
-    with open(yaml_filename, "w", encoding="utf-8") as fp:
-        yaml.dump(params, fp)
-        # fp.write(YAMLWizard.to_yaml(params))
+    _LOG.info("Writing %s", toml_filename)
+    params.write_toml(toml_filename)
 
 
 if __name__ == "__main__":

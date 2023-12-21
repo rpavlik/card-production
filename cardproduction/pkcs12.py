@@ -8,11 +8,12 @@
 
 from dataclasses import dataclass
 from typing import Optional
-from dataclass_wizard import YAMLWizard
+from dataclasses_json import dataclass_json
 
 
+@dataclass_json
 @dataclass
-class Pkcs12(YAMLWizard):
+class Pkcs12:
     """Represent a PKCS#12 file with private key and certificate."""
 
     filename: str

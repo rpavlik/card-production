@@ -13,11 +13,13 @@ import subprocess
 from pathlib import Path
 
 from dataclasses_json import dataclass_json
+import toml
 
 from .pkcs12 import Pkcs12
 from .util import is_digits, is_hex
 
 _LOG = logging.getLogger(__name__)
+
 
 @dataclass_json
 @dataclass
@@ -67,6 +69,18 @@ class GidsAppletParameters:
         sn = secrets.token_hex(16)
         pin = "".join(str(randint(0, 9)) for _ in range(6))
         return cls(admin_key=admin_key, sn=sn, pin=pin)
+
+    @classmethod
+    def load_toml(cls, path):
+        """Load a toml file containing this data."""
+        with open(path, "r", encoding="utf-8") as fp:
+            loaded = toml.load(fp)
+        return cls.from_dict(loaded)  # type: ignore
+
+    def write_toml(self, path):
+        """Write a toml file containing this data."""
+        with open(path, "w", encoding="utf-8") as fp:
+            toml.dump(self.to_dict(), fp)  # type: ignore
 
 
 @dataclass_json

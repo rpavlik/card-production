@@ -5,17 +5,13 @@
 # Original author: Rylie Pavlik <rylie.pavlik@collabora.com>
 """Set up a card with GidsApplet and a key/certificate."""
 
-import dataclasses
 import logging
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
-from dataclasses_json import dataclass_json
+from dataclasses_json import LetterCase, dataclass_json
 
-from ruamel.yaml import YAML
 import click
 import toml
-
-from cardproduction.pkcs12 import Pkcs12
 
 from ..gids import GidsApplet, GidsAppletKeyLoading, GidsAppletParameters
 from ..gp import GPParameters, GP
@@ -23,7 +19,8 @@ from ..gp import GPParameters, GP
 
 _LOG = logging.getLogger(__name__)
 
-@dataclass_json
+
+@dataclass_json(letter_case=LetterCase.SNAKE)  # type: ignore
 @dataclass
 class ProcedureConfig:
     """Configure a card production procedure for the Gids applet."""
@@ -31,10 +28,12 @@ class ProcedureConfig:
     gids_parameters_filename: str
     gp_parameters_filename: Optional[str] = None
     key_loading: List[GidsAppletKeyLoading] = field(default_factory=list)
-    # key_loading: List[Any] = field(default_factory=list)
+    locked: bool = False
+    skip_install: bool = False
+    unlock: bool = False
 
 
-def load_or_generate_gp_params(yaml, filename):
+def load_or_generate_gp_params(filename):
     log = _LOG.getChild("load_or_generate_gp_params")
     loaded = None
     try:
@@ -42,24 +41,22 @@ def load_or_generate_gp_params(yaml, filename):
             "Attempting to load GP parameters from %s",
             filename,
         )
-        with open(filename, "r", encoding="utf-8") as fp:
-            loaded = yaml.load(fp)
+        loaded = GPParameters.load_toml(filename)
     except FileNotFoundError:
         pass
     if loaded:
-        return GPParameters(**loaded)
+        return loaded
 
     log.info(
         "Generating random GP parameters and saving to %s",
         filename,
     )
     ret = GPParameters.generate()
-    with open(filename, "w", encoding="utf-8") as fp:
-        yaml.dump(dataclasses.asdict(ret), fp)
+    ret.write_toml(filename)
     return ret
 
 
-def load_or_generate_gids_params(yaml, filename):
+def load_or_generate_gids_params(filename):
     log = _LOG.getChild("load_or_generate_gids_params")
     loaded = None
     try:
@@ -67,24 +64,18 @@ def load_or_generate_gids_params(yaml, filename):
             "Attempting to load GidsApplet init parameters from %s",
             filename,
         )
-        with open(filename, "r", encoding="utf-8") as fp:
-            loaded = toml.load(fp)
+        loaded = GidsAppletParameters.load_toml(filename)
     except FileNotFoundError:
-        # _LOG.info(
-        #     "Not found, generating and saving instead."
-        # )
         pass
     if loaded:
-        # return GidsAppletParameters(**loaded)
-        return GidsAppletParameters.from_dict(loaded)
+        return loaded
 
     log.info(
         "Generating random GidsApplet parameters and saving to %s",
         filename,
     )
     ret = GidsAppletParameters.generate()
-    with open(filename, "w", encoding="utf-8") as fp:
-        toml.dump(dataclasses.asdict(ret), fp)
+    ret.write_toml(filename)
     return ret
 
 
@@ -144,54 +135,40 @@ def produce(production_file, verbose):
         logging.basicConfig(level=logging.INFO)
     log = _LOG.getChild("produce")
 
-    yaml = YAML(typ="safe")
     # yaml.register_class(Pkcs12)
     # yaml.register_class(GidsAppletKeyLoading)
     # yaml.register_class(ProcedureConfig)
     with open(production_file, "r", encoding="utf-8") as fp:
         # config: ProcedureConfig = yaml.load(fp)
         # config: dict[str, Any] = yaml.load(fp)
-        config: dict[str, Any] = toml.load(fp)
+        config_dict: dict[str, Any] = toml.load(fp)
     import pprint
 
+    pprint.pprint(config_dict)
+    assert not isinstance(config_dict, list)
+    config: ProcedureConfig = ProcedureConfig.from_dict(config_dict)  # type: ignore
     pprint.pprint(config)
-    assert not isinstance(config, list)
 
     # Load or generate GP parameters, to lock the card when done
     current_gp_parameters = None
     gp_kwargs = dict()
     final_gp_parameters = None
-    gp_param_fn = config.get("gp_parameters_filename")
-    if gp_param_fn:
-        final_gp_parameters = load_or_generate_gp_params(yaml, gp_param_fn)
+    if config.gp_parameters_filename:
+        final_gp_parameters = load_or_generate_gp_params(config.gp_parameters_filename)
 
-    if config.get("locked"):
+    if config.locked:
         current_gp_parameters = final_gp_parameters
         gp_kwargs["current_params"] = current_gp_parameters
 
     # Load GidsApplet init parameters
-    gids_parameters = load_or_generate_gids_params(
-        yaml, config["gids_parameters_filename"]
-    )
-
-    skip_install = config.get("skip_install", False)
-    key_loading = []
-    for loading in config.get("key_loading", []):
-        label = loading["label"]
-        pkcs12 = Pkcs12(**loading["key"])
-        key_loading.append(
-            GidsAppletKeyLoading(
-                label=label,
-                key=pkcs12,
-            )
-        )
+    gids_parameters = load_or_generate_gids_params(config.gids_parameters_filename)
 
     # Now that we finished parsing the config, we can start actually doing stuff.
 
     gids = GidsApplet()
     gp = GP()
 
-    if skip_install:
+    if config.skip_install:
         log.info("Skipping applet uninstall/reinstall")
     else:
         install_and_init_applet(
@@ -210,8 +187,15 @@ def produce(production_file, verbose):
             current_params=current_gp_parameters,
             verbose=verbose,
         )
+    elif config.locked and config.unlock:
+        log.info("Changing the GP lock key back to default")
+        gp.lock_card(
+            GPParameters(),
+            current_params=current_gp_parameters,
+            verbose=verbose,
+        )
 
-    for loading in key_loading:
+    for loading in config.key_loading:
         gids.import_key(
             gids_parameters,
             loading,
