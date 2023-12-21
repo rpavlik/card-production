@@ -85,6 +85,40 @@ def load_or_generate_gids_params(yaml, filename):
     return ret
 
 
+def install_and_init_applet(
+    gp: GP,
+    gids: GidsApplet,
+    gids_parameters: GidsAppletParameters,
+    verbose=False,
+    current_params: Optional[GPParameters] = None,
+):
+    log = _LOG.getChild("install_and_init_applet")
+    # Try uninstalling first
+    log.info("Uninstalling GidsApplet in case it already exists")
+    gp.uninstall(
+        gids.cap_file,
+        current_params=current_params,
+        verbose=verbose,
+    )
+
+    # Install applet
+    log.info("Installing GidsApplet")
+    gp.install(
+        gids.cap_file,
+        current_params=current_params,
+        verbose=verbose,
+    )
+    # Init applet
+    click.echo("\n\nPlease remove the card and re-insert it\n\n")
+
+    log.info("Initializing GidsApplet")
+    gids.init_card(
+        gids_parameters,
+        wait=True,
+        verbose=verbose,
+    )
+
+
 @click.command()
 @click.argument(
     "production_file",
@@ -106,7 +140,6 @@ def produce(production_file, verbose):
     else:
         logging.basicConfig(level=logging.INFO)
     log = _LOG.getChild("produce")
-    kwargs = {"verbose": verbose}
 
     yaml = YAML(typ="safe")
     # yaml.register_class(Pkcs12)
@@ -137,37 +170,48 @@ def produce(production_file, verbose):
         yaml, config["gids_parameters_filename"]
     )
 
+    skip_install = config.get("skip_install", False)
+    key_loading = []
+    for loading in config.get("key_loading", []):
+        label = loading["label"]
+        pkcs12 = Pkcs12(**loading["key"])
+        key_loading.append(
+            GidsAppletKeyLoading(
+                label=label,
+                key=pkcs12,
+            )
+        )
+
+    # Now that we finished parsing the config, we can start actually doing stuff.
+
     gids = GidsApplet()
     gp = GP()
 
-    # Try uninstalling first
-    log.info("Uninstalling GidsApplet in case it already exists")
-    gp.uninstall(gids.cap_file, **gp_kwargs, **kwargs)
-
-    # Install applet
-    log.info("Installing GidsApplet")
-    gp.install(gids.cap_file, **gp_kwargs, **kwargs)
+    if skip_install:
+        log.info("Skipping applet uninstall/reinstall")
+    else:
+        install_and_init_applet(
+            gp,
+            gids,
+            gids_parameters,
+            verbose=verbose,
+            current_params=current_gp_parameters,
+        )
 
     # Change lock key, if requested
     if final_gp_parameters is not None and current_gp_parameters != final_gp_parameters:
         log.info("Changing the GP lock key")
-        gp.lock_card(final_gp_parameters, **gp_kwargs, **kwargs)
+        gp.lock_card(
+            final_gp_parameters,
+            current_params=current_gp_parameters,
+            verbose=verbose,
+        )
 
-    # Init applet
-    click.echo("\n\nPlease remove the card and re-insert it\n\n")
-    log.info("Initializing GidsApplet")
-    gids.init_card(gids_parameters, wait=True, **kwargs)
-
-    for loading in config.get("key_loading", []):
-        pkcs12 = Pkcs12(**loading["key"])
-        label = loading["label"]
+    for loading in key_loading:
         gids.import_key(
             gids_parameters,
-            GidsAppletKeyLoading(
-                label=label,
-                key=pkcs12,
-            ),
-            **kwargs
+            loading,
+            verbose=verbose,
         )
 
 
