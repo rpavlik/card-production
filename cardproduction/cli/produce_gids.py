@@ -7,7 +7,7 @@
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import List, Optional
 from dataclasses_json import LetterCase, dataclass_json
 
 import click
@@ -135,18 +135,12 @@ def produce(production_file, verbose):
         logging.basicConfig(level=logging.INFO)
     log = _LOG.getChild("produce")
 
-    # yaml.register_class(Pkcs12)
-    # yaml.register_class(GidsAppletKeyLoading)
-    # yaml.register_class(ProcedureConfig)
     with open(production_file, "r", encoding="utf-8") as fp:
-        # config: ProcedureConfig = yaml.load(fp)
-        # config: dict[str, Any] = yaml.load(fp)
-        config_dict: dict[str, Any] = toml.load(fp)
+        config_dict = toml.load(fp)
+        config: ProcedureConfig = ProcedureConfig.from_dict(config_dict)  # type: ignore
+
     import pprint
 
-    pprint.pprint(config_dict)
-    assert not isinstance(config_dict, list)
-    config: ProcedureConfig = ProcedureConfig.from_dict(config_dict)  # type: ignore
     pprint.pprint(config)
 
     # Load or generate GP parameters, to lock the card when done
