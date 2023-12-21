@@ -12,3 +12,5 @@
 *.toml
 *.yaml
 *.yml
+
+!*.sample.toml
