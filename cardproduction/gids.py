@@ -12,16 +12,16 @@ from dataclasses import dataclass
 import subprocess
 from pathlib import Path
 
-from dataclass_wizard import YAMLWizard
+from dataclasses_json import dataclass_json
 
 from .pkcs12 import Pkcs12
 from .util import is_digits, is_hex
 
 _LOG = logging.getLogger(__name__)
 
-
+@dataclass_json
 @dataclass
-class GidsAppletParameters(YAMLWizard):
+class GidsAppletParameters:
     """Parameters required for initialization of a smartcard running GidsApplet."""
 
     admin_key: str  # 48 hex characters
@@ -69,8 +69,9 @@ class GidsAppletParameters(YAMLWizard):
         return cls(admin_key=admin_key, sn=sn, pin=pin)
 
 
+@dataclass_json
 @dataclass
-class GidsAppletKeyLoading(YAMLWizard):
+class GidsAppletKeyLoading:
     """Parameters for loading a secret key and certificate into a GIDS applet"""
 
     label: str

@@ -9,9 +9,11 @@ import dataclasses
 import logging
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
+from dataclasses_json import dataclass_json
 
 from ruamel.yaml import YAML
 import click
+import toml
 
 from cardproduction.pkcs12 import Pkcs12
 
@@ -21,7 +23,7 @@ from ..gp import GPParameters, GP
 
 _LOG = logging.getLogger(__name__)
 
-
+@dataclass_json
 @dataclass
 class ProcedureConfig:
     """Configure a card production procedure for the Gids applet."""
@@ -66,14 +68,15 @@ def load_or_generate_gids_params(yaml, filename):
             filename,
         )
         with open(filename, "r", encoding="utf-8") as fp:
-            loaded = yaml.load(fp)
+            loaded = toml.load(fp)
     except FileNotFoundError:
         # _LOG.info(
         #     "Not found, generating and saving instead."
         # )
         pass
     if loaded:
-        return GidsAppletParameters(**loaded)
+        # return GidsAppletParameters(**loaded)
+        return GidsAppletParameters.from_dict(loaded)
 
     log.info(
         "Generating random GidsApplet parameters and saving to %s",
@@ -81,7 +84,7 @@ def load_or_generate_gids_params(yaml, filename):
     )
     ret = GidsAppletParameters.generate()
     with open(filename, "w", encoding="utf-8") as fp:
-        yaml.dump(dataclasses.asdict(ret), fp)
+        toml.dump(dataclasses.asdict(ret), fp)
     return ret
 
 
@@ -147,7 +150,8 @@ def produce(production_file, verbose):
     # yaml.register_class(ProcedureConfig)
     with open(production_file, "r", encoding="utf-8") as fp:
         # config: ProcedureConfig = yaml.load(fp)
-        config: dict[str, Any] = yaml.load(fp)
+        # config: dict[str, Any] = yaml.load(fp)
+        config: dict[str, Any] = toml.load(fp)
     import pprint
 
     pprint.pprint(config)

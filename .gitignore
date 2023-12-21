@@ -9,5 +9,6 @@
 *.jar
 *.p12
 *.pyc
+*.toml
 *.yaml
 *.yml
