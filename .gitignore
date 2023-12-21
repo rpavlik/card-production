@@ -4,6 +4,7 @@
 .*
 !.gitignore
 !.editorconfig
+!.reuse
 
 *.cap
 *.jar
