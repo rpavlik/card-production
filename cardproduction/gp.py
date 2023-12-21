@@ -77,10 +77,17 @@ class GP:
             # some iterable
             self.invocation_cmd = list(invocation_cmd)
 
-    def _make_cmd(self, verbose=False):
+    def _make_cmd(
+        self,
+        verbose=False,
+        current_params: Optional[GPParameters] = None,
+    ):
         cmd = copy(self.invocation_cmd)
         if verbose:
             cmd.append("--verbose")
+        if current_params:
+            current_params.enforce_requirements()
+            cmd.extend(("--key", current_params.key))
         return cmd
 
     def uninstall(self, cap_file, allow_failure=True, verbose=False, **kwargs):
@@ -113,21 +120,20 @@ class GP:
     def lock_card(
         self,
         new_params: GPParameters,
-        old_params: Optional[GPParameters] = None,
+        current_params: Optional[GPParameters] = None,
         verbose=False,
     ):
         """Set the GP lock key."""
-        if not old_params:
+        if not current_params:
             # Use default
-            old_params = GPParameters()
+            current_params = GPParameters()
         new_params.enforce_requirements()
-        old_params.enforce_requirements()
         self._log.info(
-            "Changing GP lock key from %s to %s", old_params.key, new_params.key
+            "Changing GP lock key from %s to %s", current_params.key, new_params.key
         )
 
-        cmd = self._make_cmd(verbose=verbose)
-        cmd.extend(("--key", old_params.key, "--lock", new_params.key))
+        cmd = self._make_cmd(verbose=verbose, current_params=current_params)
+        cmd.extend(("--lock", new_params.key))
         subprocess.check_call(cmd)
 
 
@@ -142,4 +148,6 @@ if __name__ == "__main__":
 
     gp.lock_card(random_key_params, verbose=True)
 
-    gp.lock_card(new_params=GPParameters(), old_params=random_key_params, verbose=True)
+    gp.lock_card(
+        new_params=GPParameters(), current_params=random_key_params, verbose=True
+    )
