@@ -8,28 +8,36 @@
 # Sample card production config file.
 ###
 
-# TOML file for ISD lock key storage.
-# If a filename is given but does not exist, a random key will be generated and used to lock the card.
-# If a filename is given and it does exist, the key in that file is assumed to be the desired one.
-#    As long as "locked" is not specified, the card will have its ISD lock keys changed to the key in that file.
-#        (Assumes the current keys are the default 404142434445464748494A4B4C4D4E4F)
-#    Otherwise we assume the card is already using the keys in that file.
-#
-# if this is not specified, the card will not have its ISD lock keys changed
-# gp_parameters_filename = "samplecard-gp.toml"
-
-# If this is uncommented/set to true, the script assumes the card already had its ISD lock keys changed
-# locked = true
-
-# If this is uncommented/set to true, the script will switch the card's ISD lock keys back to the default
-# unlock = true
-
-# If this is true, we assume that the GidsApplet is already installed and init'ed.
-skip_install = true
-
 # If this file does not exist, it will be generated
 # This file contains the pin to actually use the card!
+# (as well as the admin key and assigned serial number)
 gids_parameters_filename = "samplecard-gids.toml"
+
+# Install and init the GidsApplet, after attempting an uninstall first in case it was already there.
+install_and_init_gids = true
+
+
+# Optionally changing GlobalPlatform ISD keys.
+# If you omit this section, we assume the card has default ISD keys and leave it that way when done.
+# Not good for production, but good for development/testing.
+[gp_config]
+
+# The two gp_parameters_filename fields name TOML files containing ISD lock keys for GlobalPlatform.
+# If either one is not specified, the corresponding keys are assumed to be default.
+# (404142434445464748494A4B4C4D4E4F)
+# If desired_gp_parameters_filename is specified but does not exist, it will first be generated.
+#
+# Common use cases:
+# - If you start with an unused card, specify only desired_gp_parameters_filename,
+#   and the card's ISD key will be set to a newly generated key written to that file.
+#   You cannot run the production script again on that same card then, because the key is changed!
+# - To "unlock" (reset keys to default) a card, specify only current_gp_parameters_filename.
+# - To use an already "locked" (non-default keys) card, use the same existing file for
+#   current_gp_parameters_filename and desired_gp_parameters_filename
+
+# current_parameters_filename = "sample-gp.toml"
+# desired_parameters_filename = "sample-gp.toml"
+
 
 # Load as many pkcs12 keys as you want (and as will fit)
 # Label is your choice, the stuff under .key describes how to parse the p12 file.

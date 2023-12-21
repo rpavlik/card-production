@@ -22,15 +22,20 @@ _LOG = logging.getLogger(__name__)
 
 @dataclass_json(letter_case=LetterCase.SNAKE)  # type: ignore
 @dataclass
+class GPConfig:
+    current_parameters_filename: Optional[str] = None
+    desired_parameters_filename: Optional[str] = None
+
+
+@dataclass_json(letter_case=LetterCase.SNAKE)  # type: ignore
+@dataclass
 class ProcedureConfig:
     """Configure a card production procedure for the Gids applet."""
 
     gids_parameters_filename: str
-    gp_parameters_filename: Optional[str] = None
+    install_and_init_gids: bool
+    gp_config: GPConfig = field(default_factory=GPConfig)
     key_loading: List[GidsAppletKeyLoading] = field(default_factory=list)
-    locked: bool = False
-    skip_install: bool = False
-    unlock: bool = False
 
 
 def load_or_generate_gp_params(filename):
@@ -144,15 +149,19 @@ def produce(production_file, verbose):
     pprint.pprint(config)
 
     # Load or generate GP parameters, to lock the card when done
-    current_gp_parameters = None
-    gp_kwargs = dict()
-    final_gp_parameters = None
-    if config.gp_parameters_filename:
-        final_gp_parameters = load_or_generate_gp_params(config.gp_parameters_filename)
+    current_gp_parameters: Optional[GPParameters] = None
+    desired_gp_parameters: Optional[GPParameters] = None
 
-    if config.locked:
-        current_gp_parameters = final_gp_parameters
-        gp_kwargs["current_params"] = current_gp_parameters
+    if config.gp_config.desired_parameters_filename:
+        desired_gp_parameters = load_or_generate_gp_params(
+            config.gp_config.desired_parameters_filename
+        )
+
+    if config.gp_config.current_parameters_filename:
+        # This one must exists, makes no sense to generate the current keys randomly
+        current_gp_parameters = GPParameters.load_toml(
+            config.gp_config.current_parameters_filename
+        )
 
     # Load GidsApplet init parameters
     gids_parameters = load_or_generate_gids_params(config.gids_parameters_filename)
@@ -162,9 +171,7 @@ def produce(production_file, verbose):
     gids = GidsApplet()
     gp = GP()
 
-    if config.skip_install:
-        log.info("Skipping applet uninstall/reinstall")
-    else:
+    if config.install_and_init_gids:
         install_and_init_applet(
             gp,
             gids,
@@ -172,19 +179,24 @@ def produce(production_file, verbose):
             verbose=verbose,
             current_params=current_gp_parameters,
         )
+    else:
+        log.info("Skipping applet uninstall/reinstall")
 
     # Change lock key, if requested
-    if final_gp_parameters is not None and current_gp_parameters != final_gp_parameters:
-        log.info("Changing the GP lock key")
-        gp.lock_card(
-            final_gp_parameters,
-            current_params=current_gp_parameters,
-            verbose=verbose,
-        )
-    elif config.locked and config.unlock:
+    if desired_gp_parameters is None and current_gp_parameters is not None:
         log.info("Changing the GP lock key back to default")
         gp.lock_card(
             GPParameters(),
+            current_params=current_gp_parameters,
+            verbose=verbose,
+        )
+    elif (
+        desired_gp_parameters is not None
+        and desired_gp_parameters != current_gp_parameters
+    ):
+        log.info("Changing the GP lock key")
+        gp.lock_card(
+            desired_gp_parameters,
             current_params=current_gp_parameters,
             verbose=verbose,
         )
