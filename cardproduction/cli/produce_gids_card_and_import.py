@@ -121,10 +121,16 @@ def produce(production_file, verbose):
     assert not isinstance(config, list)
 
     # Load or generate GP parameters, to lock the card when done
-    gp_parameters = None
+    current_gp_parameters = None
+    gp_kwargs = dict()
+    final_gp_parameters = None
     gp_param_fn = config.get("gp_parameters_filename")
     if gp_param_fn:
-        gp_parameters = load_or_generate_gp_params(yaml, gp_param_fn)
+        final_gp_parameters = load_or_generate_gp_params(yaml, gp_param_fn)
+
+    if config.get("locked"):
+        current_gp_parameters = final_gp_parameters
+        gp_kwargs["current_params"] = current_gp_parameters
 
     # Load GidsApplet init parameters
     gids_parameters = load_or_generate_gids_params(
@@ -136,16 +142,16 @@ def produce(production_file, verbose):
 
     # Try uninstalling first
     log.info("Uninstalling GidsApplet in case it already exists")
-    gp.uninstall(gids.cap_file, **kwargs)
+    gp.uninstall(gids.cap_file, **gp_kwargs, **kwargs)
 
     # Install applet
     log.info("Installing GidsApplet")
-    gp.install(gids.cap_file, **kwargs)
+    gp.install(gids.cap_file, **gp_kwargs, **kwargs)
 
     # Change lock key, if requested
-    if gp_parameters is not None:
+    if final_gp_parameters is not None and current_gp_parameters != final_gp_parameters:
         log.info("Changing the GP lock key")
-        gp.lock_card(gp_parameters, **kwargs)
+        gp.lock_card(final_gp_parameters, **gp_kwargs, **kwargs)
 
     # Init applet
     click.echo("\n\nPlease remove the card and re-insert it\n\n")
