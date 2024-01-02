@@ -15,11 +15,20 @@ import click
 import toml
 
 from .common import GPConfig, load_or_generate_gp_params
-from ..openpgp import OpenPGPAppletInstallParameters, SmartPGPApplet
+from ..openpgp import OpenPGPAppletInstallParameters, OpenPGPPins, SmartPGPApplet
 from ..gp import GPParameters, GP
 
 
 _LOG = logging.getLogger(__name__)
+
+
+@dataclass_json(letter_case=LetterCase.SNAKE)  # type: ignore
+@dataclass
+class PinConfig:
+    """Parameters for setting pins."""
+
+    current_pins_filename: Optional[str] = None
+    desired_pins_filename: Optional[str] = None
 
 
 @dataclass_json(letter_case=LetterCase.SNAKE)  # type: ignore
@@ -30,6 +39,7 @@ class ProcedureConfig:
     openpgp_install_parameters_filename: str
     install_smartpgp: bool
     gp_config: GPConfig = field(default_factory=GPConfig)
+    pin_config: PinConfig = field(default_factory=PinConfig)
     # key_loading: List[GidsAppletKeyLoading] = field(default_factory=list)
 
 
@@ -53,6 +63,30 @@ def load_or_generate_openpgp_install_params(filename) -> OpenPGPAppletInstallPar
         filename,
     )
     ret = OpenPGPAppletInstallParameters.generate()
+    ret.write_toml(filename)
+    return ret
+
+
+def load_or_generate_openpgp_pins(filename) -> OpenPGPPins:
+    """Load an OpenPGP pins file, if one exists, or generate one."""
+    log = _LOG.getChild("load_or_generate_openpgp_pins")
+    loaded = None
+    try:
+        log.info(
+            "Attempting to load OpenPGP pins from %s",
+            filename,
+        )
+        loaded = OpenPGPPins.load_toml(filename)
+    except FileNotFoundError:
+        pass
+    if loaded:
+        return loaded
+
+    log.info(
+        "Generating random OpenPGP pins and saving to %s",
+        filename,
+    )
+    ret = OpenPGPPins.generate()
     ret.write_toml(filename)
     return ret
 
@@ -138,6 +172,19 @@ def produce(production_file, verbose):
         config.openpgp_install_parameters_filename
     )
 
+    # Load or generate pins, to change if desired
+    current_pins: Optional[OpenPGPPins] = None
+    desired_pins: Optional[OpenPGPPins] = None
+
+    if config.pin_config.desired_pins_filename:
+        desired_pins = load_or_generate_openpgp_pins(
+            config.pin_config.desired_pins_filename
+        )
+
+    if config.pin_config.current_pins_filename:
+        # This one must exists, makes no sense to generate the current keys randomly
+        desired_pins = OpenPGPPins.load_toml(config.pin_config.current_pins_filename)
+
     # Now that we finished parsing the config, we can start actually doing stuff.
 
     smartpgp = SmartPGPApplet()
@@ -170,6 +217,15 @@ def produce(production_file, verbose):
         gp.lock_card(
             desired_gp_parameters,
             current_params=current_gp_parameters,
+            verbose=verbose,
+        )
+
+    # Change pins, if requested
+    if desired_pins is not None and desired_pins != current_pins:
+        log.info("Changing the pins")
+        smartpgp.change_pins(
+            desired_pins,
+            current_pins=current_pins,
             verbose=verbose,
         )
 
