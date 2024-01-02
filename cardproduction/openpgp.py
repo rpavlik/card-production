@@ -224,7 +224,7 @@ class SmartPGPApplet:
                 script.close()
 
                 self._log.info(f"Wrote commands to {script.name}")
-                args = ["opensc-explorer"]
+                args = ["opensc-explorer", "--card-driver", "openpgp"]
                 if verbose:
                     args.append("--verbose")
                 if wait:
