@@ -5,6 +5,8 @@
 # Original author: Rylie Pavlik <rylie.pavlik@collabora.com>
 """General functionality without a better home."""
 
+from random import randint
+
 
 def is_hex(s: str) -> bool:
     """
@@ -63,3 +65,19 @@ def is_digits(s: str) -> bool:
     False
     """
     return all(c in "0123456789" for c in s)
+
+
+def generate_decimal_pin(digits: int) -> str:
+    """
+    Return a random decimal pin with the requested number of digits.
+
+    >>> len(generate_decimal_pin(5))
+    5
+
+    >>> len(generate_decimal_pin(8))
+    8
+
+    >>> is_digits(generate_decimal_pin(6))
+    True
+    """
+    return "".join(str(randint(0, 9)) for _ in range(digits))
