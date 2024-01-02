@@ -13,18 +13,12 @@ from dataclasses_json import LetterCase, dataclass_json
 import click
 import toml
 
+from .common import GPConfig, load_or_generate_gp_params
 from ..gids import GidsApplet, GidsAppletKeyLoading, GidsAppletParameters
 from ..gp import GPParameters, GP
 
 
 _LOG = logging.getLogger(__name__)
-
-
-@dataclass_json(letter_case=LetterCase.SNAKE)  # type: ignore
-@dataclass
-class GPConfig:
-    current_parameters_filename: Optional[str] = None
-    desired_parameters_filename: Optional[str] = None
 
 
 @dataclass_json(letter_case=LetterCase.SNAKE)  # type: ignore
@@ -38,30 +32,8 @@ class ProcedureConfig:
     key_loading: List[GidsAppletKeyLoading] = field(default_factory=list)
 
 
-def load_or_generate_gp_params(filename):
-    log = _LOG.getChild("load_or_generate_gp_params")
-    loaded = None
-    try:
-        log.info(
-            "Attempting to load GP parameters from %s",
-            filename,
-        )
-        loaded = GPParameters.load_toml(filename)
-    except FileNotFoundError:
-        pass
-    if loaded:
-        return loaded
-
-    log.info(
-        "Generating random GP parameters and saving to %s",
-        filename,
-    )
-    ret = GPParameters.generate()
-    ret.write_toml(filename)
-    return ret
-
-
-def load_or_generate_gids_params(filename):
+def load_or_generate_gids_params(filename) -> GidsAppletParameters:
+    """Load a GidsApplet parameters file, if one exists, or generate one."""
     log = _LOG.getChild("load_or_generate_gids_params")
     loaded = None
     try:
@@ -91,6 +63,7 @@ def install_and_init_applet(
     verbose=False,
     current_params: Optional[GPParameters] = None,
 ):
+    """Install the GidsApplet and initialize it, setting pin."""
     log = _LOG.getChild("install_and_init_applet")
     # Try uninstalling first
     log.info("Uninstalling GidsApplet in case it already exists")
@@ -133,7 +106,7 @@ def install_and_init_applet(
     help="Verbose logging",
 )
 def produce(production_file, verbose):
-    """Set up a card with GidsApplet and a key/certificate"""
+    """Set up a card with GidsApplet and a key/certificate."""
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
     else:
