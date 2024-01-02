@@ -1,4 +1,4 @@
-# Copyright 2023, Collabora, Ltd.
+# Copyright 2023-2024, Collabora, Ltd.
 #
 # SPDX-License-Identifier: GPL-3.0-only
 #
@@ -7,7 +7,6 @@
 
 import logging
 import secrets
-from random import randint
 from dataclasses import dataclass
 import subprocess
 from pathlib import Path
@@ -16,7 +15,7 @@ from dataclasses_json import dataclass_json
 import toml
 
 from .pkcs12 import Pkcs12
-from .util import is_digits, is_hex
+from .util import generate_decimal_pin, is_digits, is_hex
 
 _LOG = logging.getLogger(__name__)
 
@@ -67,7 +66,7 @@ class GidsAppletParameters:
         """Randomly generate suitable values and return an instance."""
         admin_key = secrets.token_hex(24)
         sn = secrets.token_hex(16)
-        pin = "".join(str(randint(0, 9)) for _ in range(6))
+        pin = generate_decimal_pin(6)
         return cls(admin_key=admin_key, sn=sn, pin=pin)
 
     @classmethod
