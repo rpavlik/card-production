@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: 2023, Collabora, Ltd.
+#
+# SPDX-License-Identifier: CC0-1.0
+#
+# Original author: Rylie Pavlik <rylie.pavlik@collabora.com>
+
+###
+# Sample card production config file.
+###
+
+# If this file does not exist, it will be generated
+# This file contains the pin to actually use the card!
+# (as well as the admin key and assigned serial number)
+openpgp_install_parameters_filename = "samplecard-pgp.toml"
+
+# Install the SmartPGP applet, after attempting an uninstall first in case it was already there.
+install_smartpgp = false
+
+
+# Optionally changing GlobalPlatform ISD keys.
+# If you omit this section, we assume the card has default ISD keys and leave it that way when done.
+# Not good for production, but good for development/testing.
+[gp_config]
+
+# The two gp_parameters_filename fields name TOML files containing ISD lock keys for GlobalPlatform.
+# If either one is not specified, the corresponding keys are assumed to be default.
+# (404142434445464748494A4B4C4D4E4F)
+# If desired_gp_parameters_filename is specified but does not exist, it will first be generated.
+#
+# Common use cases:
+# - If you start with an unused card, specify only desired_gp_parameters_filename,
+#   and the card's ISD key will be set to a newly generated key written to that file.
+#   You cannot run the production script again on that same card then, because the key is changed!
+# - To "unlock" (reset keys to default) a card, specify only current_gp_parameters_filename.
+# - To use an already "locked" (non-default keys) card, use the same existing file for
+#   current_gp_parameters_filename and desired_gp_parameters_filename
+
+# current_parameters_filename = "sample-gp.toml"
+# desired_parameters_filename = "sample-gp.toml"
+
+[pin_config]
+
+# This works just like gp_config:
+# If desired is set but file is missing, it is generated randomly.
+# If current is set, it is loaded, otherwise assumed to be default (123456/12345678)
+# If desired and current do not have the same values, the card will have its configuration changed.
+
+# current_pins_filename = "samplecard-pins.toml"
+desired_pins_filename = "samplecard-pins.toml"

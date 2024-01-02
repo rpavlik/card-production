@@ -120,13 +120,23 @@ class GP:
             else:
                 raise RuntimeError(f"Failed to uninstall {cap_file}")
 
-    def install(self, cap_file, default_selected=True, verbose=False, **kwargs):
+    def install(
+        self,
+        cap_file,
+        default_selected=True,
+        verbose=False,
+        extra_args: Optional[list[str]] = None,
+        **kwargs,
+    ):
         """Install an applet."""
         cmd = self._make_cmd(verbose=verbose, **kwargs)
         cmd.extend(("--install", str(cap_file)))
 
         if default_selected:
             cmd.append("--default")
+
+        if extra_args:
+            cmd.extend(extra_args)
 
         self._log.info("Installing %s", cap_file)
         subprocess.check_call(cmd)
