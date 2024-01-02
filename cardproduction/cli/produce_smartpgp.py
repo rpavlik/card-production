@@ -7,6 +7,7 @@
 
 import logging
 from dataclasses import dataclass, field
+import subprocess
 from typing import Optional
 from dataclasses_json import LetterCase, dataclass_json
 
@@ -84,12 +85,7 @@ def install_and_init_applet(
     # Init applet
     click.echo("\n\nPlease remove the card and re-insert it\n\n")
 
-    # log.info("Initializing GidsApplet")
-    # gids.init_card(
-    #     gids_parameters,
-    #     wait=True,
-    #     verbose=verbose,
-    # )
+    subprocess.check_call(["openpgp-tool", "--card-info", "--verbose", "--wait"])
 
 
 @click.command()
