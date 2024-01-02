@@ -5,16 +5,16 @@
 # Original author: Rylie Pavlik <rylie.pavlik@collabora.com>
 
 ###
-# Sample card production config file.
+# Sample card production config file for cardproduction.cli.produce_smartpgp
 ###
 
 # If this file does not exist, it will be generated
-# This file contains the pin to actually use the card!
-# (as well as the admin key and assigned serial number)
+# It mainly contains the serial number: can also contain manufacturer code
+# if you have registered one.
 openpgp_install_parameters_filename = "samplecard-pgp.toml"
 
 # Install the SmartPGP applet, after attempting an uninstall first in case it was already there.
-install_smartpgp = false
+install_smartpgp = true
 
 
 # Optionally changing GlobalPlatform ISD keys.
