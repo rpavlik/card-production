@@ -114,6 +114,7 @@ def install_and_init_applet(
         smartpgp.cap_file,
         current_params=current_params,
         verbose=verbose,
+        default_selected=False,  # not required
         extra_args=smartpgp.compute_extra_args(install_params),
     )
     # Init applet
