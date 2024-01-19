@@ -1,4 +1,4 @@
-# Copyright 2023, Collabora, Ltd.
+# Copyright 2023-2024, Collabora, Ltd.
 #
 # SPDX-License-Identifier: GPL-3.0-only
 #
@@ -6,6 +6,7 @@
 """General functionality without a better home."""
 
 from random import randint
+from typing import Optional
 
 
 def is_hex(s: str) -> bool:
@@ -81,3 +82,21 @@ def generate_decimal_pin(digits: int) -> str:
     True
     """
     return "".join(str(randint(0, 9)) for _ in range(digits))
+
+
+def handle_opensc_common_args(
+    cmd: list[str],
+    verbose: bool = False,
+    wait: bool = False,
+    reader: Optional[int] = None,
+    aid: Optional[str] = None,
+):
+    """Extend cmd with all arguments required to apply the provided keyword args."""
+    if verbose:
+        cmd.append("--verbose")
+    if wait:
+        cmd.append("--wait")
+    if reader is not None:
+        cmd.extend(("--reader", str(reader)))
+    if aid is not None:
+        cmd.extend(("--aid", aid))
