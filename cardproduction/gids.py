@@ -97,6 +97,7 @@ class GidsApplet(Pkcs15Tool):
 
     def __init__(self, cap_file="GidsApplet-import4k-1.3-20231219.cap"):
         """Initialize general parameters about the applet."""
+        super().__init__()
         self.cap_file = Path(cap_file)
         if not self.cap_file.exists():
             raise RuntimeError(f"Could not find GidApplet cap file {cap_file}")
