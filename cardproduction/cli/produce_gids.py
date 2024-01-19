@@ -174,12 +174,23 @@ def produce(production_file, verbose):
             verbose=verbose,
         )
 
-    for loading in config.key_loading:
-        gids.import_key(
-            gids_parameters,
-            loading,
+    loaded_keys = set(
+        gids.enumerate_certificates(
             verbose=verbose,
         )
+    )
+    for loading in config.key_loading:
+        if loading.label in loaded_keys:
+            log.info(
+                "Already have a certificate/key with label %s on the card, skipping",
+                loading.label,
+            )
+        else:
+            gids.import_key(
+                gids_parameters,
+                loading,
+                verbose=verbose,
+            )
 
 
 if __name__ == "__main__":

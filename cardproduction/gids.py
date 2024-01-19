@@ -14,6 +14,7 @@ from pathlib import Path
 from dataclasses_json import dataclass_json
 import toml
 
+from .pkcs15tool import Pkcs15Tool
 from .pkcs12 import Pkcs12
 from .util import generate_decimal_pin, is_digits, is_hex
 
@@ -91,7 +92,7 @@ class GidsAppletKeyLoading:
     key: Pkcs12
 
 
-class GidsApplet:
+class GidsApplet(Pkcs15Tool):
     """Perform interactions with the GidsApplet."""
 
     def __init__(self, cap_file="GidsApplet-import4k-1.3-20231219.cap"):
