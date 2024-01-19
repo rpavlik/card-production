@@ -85,7 +85,7 @@ class GidsAppletParameters:
 @dataclass_json
 @dataclass
 class GidsAppletKeyLoading:
-    """Parameters for loading a secret key and certificate into a GIDS applet"""
+    """Parameters for loading a secret key and certificate into a GIDS applet."""
 
     label: str
     key: Pkcs12
@@ -95,7 +95,7 @@ class GidsApplet:
     """Perform interactions with the GidsApplet."""
 
     def __init__(self, cap_file="GidsApplet-import4k-1.3-20231219.cap"):
-        """Initialize general parameters about the applet"""
+        """Initialize general parameters about the applet."""
         self.cap_file = Path(cap_file)
         if not self.cap_file.exists():
             raise RuntimeError(f"Could not find GidApplet cap file {cap_file}")
@@ -125,7 +125,7 @@ class GidsApplet:
     def import_key(
         self, params: GidsAppletParameters, loading: GidsAppletKeyLoading, verbose=False
     ):
-        """Import private key and certificate from p12 file"""
+        """Import private key and certificate from p12 file."""
         cmd = ["pkcs15-init"]
         if verbose:
             cmd.append("-v")
